@@ -12,3 +12,4 @@ ucimlrepo
 matplotlib
 seaborn
 prometheus-fastapi-instrumentator
+httpx2
