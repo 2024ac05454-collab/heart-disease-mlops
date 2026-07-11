@@ -15,10 +15,10 @@ pipeline {
             }
         }
         
-        stage('Code Linting') {
+      stage('Code Linting') {
             steps {
-                // Groovy requires double slashes for comments here
-                sh './venv/bin/flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics'
+                // Added --exclude=venv so it only checks your actual project code
+                sh './venv/bin/flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv'
             }
         }
         
