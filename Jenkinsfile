@@ -4,36 +4,42 @@ pipeline {
     stages {
         stage('Install Dependencies') {
             steps {
-                sh 'python -m pip install --upgrade pip'
-                sh 'pip install flake8 pytest'
-                sh 'pip install -r requirements.txt'
+                sh '''
+                # Create the virtual environment named 'venv'
+                python -m venv venv
+                
+                # Use the venv's pip to install everything
+                ./venv/bin/python -m pip install --upgrade pip
+                ./venv/bin/pip install flake8 pytest
+                ./venv/bin/pip install -r requirements.txt
+                '''
             }
         }
         
         stage('Code Linting') {
             steps {
-                // Fails the build if Python syntax errors are found
-                sh 'flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics'
+                # Use the venv's flake8
+                sh './venv/bin/flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics'
             }
         }
         
         stage('Model Training') {
             steps {
-                // Trains the model and updates the local mlruns directory
-                sh 'python src/train.py'
+                # Use the venv's Python to train the model
+                sh './venv/bin/python src/train.py'
             }
         }
         
         stage('Unit Testing') {
             steps {
-                // Tests the FastAPI endpoints
-                sh 'pytest tests/'
+                # Use the venv's pytest
+                sh './venv/bin/pytest tests/'
             }
         }
         
         stage('Build Docker Image') {
             steps {
-                // Packages the API and the fresh models into a container
+                # Docker handles its own environment, so this stays the same
                 sh 'docker build -t heart-disease-api:latest .'
             }
         }
