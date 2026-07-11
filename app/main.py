@@ -28,38 +28,40 @@ async def log_requests(request: Request, call_next):
     logger.info(f"Path: {request.url.path} | Method: {request.method} | Status: {response.status_code} | Duration: {process_time:.4f}s")
     return response
 
-# Dynamic discovery of the latest experiment and run model path
+# --- FIXED MODEL DISCOVERY ---
 print("Configuring MLflow tracking and searching for active model artifacts...")
-tracking_uri = pathlib.Path("mlruns").resolve().as_uri()
+
+# 1. Use absolute path to ensure Jenkins finds the 'mlruns' folder
+workspace_path = os.getcwd()
+mlruns_path = os.path.join(workspace_path, "mlruns")
+tracking_uri = pathlib.Path(mlruns_path).resolve().as_uri()
 mlflow.set_tracking_uri(tracking_uri)
 
-# Fallback initialization structure
 model = None
 model_name = "Unknown"
 
-# Dynamically locate the experiment folder within mlruns
-experiment_dirs = glob.glob(os.path.join("mlruns", "[0-9]*"))
-if experiment_dirs:
-    # Scan all runs inside experiment subdirectories
-    run_dirs = []
-    for exp in experiment_dirs:
-        run_dirs.extend(glob.glob(os.path.join(exp, "*")))
+# 2. Use a 'wildcard' search that ignores specific naming patterns
+# This looks for 'model' artifacts deep inside the mlruns folder tree
+model_search_path = os.path.join(mlruns_path, "*", "*", "artifacts", "model")
+valid_model_paths = glob.glob(model_search_path)
+
+print(f"DEBUG: Searching for models in {model_search_path}")
+print(f"DEBUG: Found these paths: {valid_model_paths}")
+
+if valid_model_paths:
+    # Get the latest modified one
+    latest_model_path = max(valid_model_paths, key=os.path.getctime)
     
-    # Exclude non-directory entries or special folders
-    valid_runs = [r for r in run_dirs if os.path.isdir(r) and os.path.exists(os.path.join(r, "artifacts", "model"))]
+    # Extract the run folder name (two levels up from 'model')
+    latest_run_dir = os.path.dirname(os.path.dirname(latest_model_path))
+    model_name = os.path.basename(latest_run_dir)
     
-    if valid_runs:
-        # Retrieve the single latest modified run directory
-        latest_run_dir = max(valid_runs, key=os.path.getctime)
-        model_name = os.path.basename(latest_run_dir)
-        model_path = os.path.join(latest_run_dir, "artifacts", "model")
-        MODEL_URI = pathlib.Path(model_path).resolve().as_uri()
-        
-        print(f"Loading latest active model path from URI: {MODEL_URI}")
-        model = mlflow.sklearn.load_model(MODEL_URI)
+    MODEL_URI = pathlib.Path(latest_model_path).resolve().as_uri()
+    print(f"Loading latest active model from: {MODEL_URI}")
+    model = mlflow.sklearn.load_model(MODEL_URI)
 
 if model is None:
-    print("Warning: Active registry models not found. Ensure train.py has run successfully.")
+    print("Warning: Active registry models not found in mlruns!")
 
 class PatientData(BaseModel):
     age: float; sex: float; cp: float; trestbps: float; chol: float
@@ -78,7 +80,7 @@ def predict(data: PatientData):
     input_data = pd.DataFrame([data.model_dump()]) 
     prediction = model.predict(input_data)[0]
     probabilities = model.predict_proba(input_data)
-    confidence = probabilities[0][1] # Probability score for class 1
+    confidence = probabilities[0][1] 
     
     return {
         "prediction": int(prediction),
