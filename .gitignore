@@ -1,0 +1,15 @@
+# Python Virtual Environment
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# MLflow and Model Artifacts
+mlruns/
+outputs/
+
+# Environment Variables (for safety)
+.env

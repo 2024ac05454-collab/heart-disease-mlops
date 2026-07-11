@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      # ADDED: Permanent storage for Prometheus metrics
+      - prometheus_data:/prometheus 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      # ADDED: Permanent storage for Grafana dashboards and settings
+      - grafana_data:/var/lib/grafana 
+    depends_on:
+      - prometheus
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins_local
+    user: root 
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+# Declaring all three permanent volumes here
+volumes:
+  jenkins_home:
+  prometheus_data:
+  grafana_data:
