@@ -32,7 +32,7 @@ pipeline {
         stage('Unit Testing') {
             steps {
                 // Use the venv's pytest
-                sh './venv/bin/pytest tests/'
+                sh 'PYTHONPATH=. ./venv/bin/pytest tests/'
             }
         }
         

@@ -10,6 +10,11 @@ def test_predict_endpoint():
         "slope": 1, "ca": 0, "thal": 2
     }
     response = client.post("/predict", json=payload)
+    
+    # Check if the API successfully responded
     assert response.status_code == 200
-    assert "prediction" in response.json()
-    assert "confidence_score" in response.json()
+    
+    # Check if the model successfully returned the expected keys
+    data = response.json()
+    assert "prediction" in data
+    assert "confidence_score" in data
